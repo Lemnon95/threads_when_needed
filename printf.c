@@ -16,7 +16,6 @@ bool wake_up_all = false; //global variable indicating when there will be no mor
 
 void* Sleep (void* rank);
 
-
 int main(int argc, char* argv[]) {
 	/* variables declaration */
 	int flag = 1;
