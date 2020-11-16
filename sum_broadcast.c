@@ -102,14 +102,17 @@ void* Sleep (void* rank) {
 			if (a[my_rank][0] == 1) { // my array is full
 				for (int i = 1; i < 4; i++)
 					my_sum += a[my_rank][i];
-				}
+				
 				pthread_mutex_lock(&sums);
 				global_sum += my_sum;
 				pthread_mutex_unlock(&sums);
 				my_sum = 0;
-			}			
+			}
+		}			
 	}	
 	return NULL;
 }
+
+
 
 
