@@ -30,7 +30,6 @@ int main(int argc, char* argv[]) {
 	/* dinamically allocating each thread portion of a */
 	for (int i = 0; i < thread_count; i++){
 		a[i] = malloc(4*sizeof(int));
-		a[i][0] = 0; //used like a flag, 0 for empty 1 for full.
 	}
 	
 	pthread_mutex_init(&mutex, NULL);
@@ -48,6 +47,10 @@ int main(int argc, char* argv[]) {
 			if (blocks > thread_count)
 				printf("Too many tasks, try again.\n\n");
 		} while (blocks > thread_count);
+		
+		for (int i = 0; i < thread_count; i++)
+			a[i][0] = 0; //used like a flag, 0 for empty 1 for full.
+		
 		
 		for(int j = 0; j < blocks; j++) {
 			a[j][0] = 1;
@@ -78,6 +81,7 @@ int main(int argc, char* argv[]) {
 	
 	printf("The global sum is: %d ", global_sum);
 	
+	/* Free allocated memory */
 	pthread_mutex_destroy(&mutex);
 	pthread_mutex_destroy(&sums);
 	pthread_cond_destroy(&cond_var);
