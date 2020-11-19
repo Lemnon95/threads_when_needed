@@ -6,5 +6,5 @@ Each of this programs handles a different task (you can guess which from their n
 
 Usage:
 
-Linux -> compile: gcc -g -o <filename> -c <file.c> -lpthread.
-         ./<filename> <# threads>
+Linux -> compile: gcc -g -o <file> -c <file.c> -lpthread.
+         run    : ./<file> <# threads>
