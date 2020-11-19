@@ -18,7 +18,7 @@ void* Sleep (void* rank);
 
 int main(int argc, char* argv[]) {
 	/* variables declaration */
-	int flag = 1;
+	int flag;
 	int how_many;
 	thread_count = strtol(argv[1], NULL, 10);
 	pthread_t* thread_handles = malloc(thread_count*sizeof(pthread_t));
