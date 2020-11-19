@@ -4,7 +4,7 @@ But what "as needed" means, techically? Simply put, main thread handles requests
 
 Each of this programs handles a different task (you can guess which from their names), the surrounding logic is pretty much the same for each one of them, what differs is the data structures used and how to access them. 
 
-Usage
+Usage:
 
-On Linux: compile: gcc -g -o <filename> -c <file.c> -lpthread
-run    : ./<filename> <number of threads>
+Linux -> compile: gcc -g -o <filename> -c <file.c> -lpthread.
+         ./<filename> <# threads>
