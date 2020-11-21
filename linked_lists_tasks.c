@@ -19,10 +19,15 @@ struct list_node_s {
 	struct list_node_s* next;
 }*head;
 
-struct queue {
+typedef struct queue {
 	int type, value;
 	struct queue *link;
-}*front, *rear;
+} Queue;
+
+Queue *front;
+Queue *rear;
+
+int size = 0;
 
 /*struct members {
 	int *a;
@@ -30,9 +35,9 @@ struct queue {
 }array_of_members;*/
 
 void* Sleep (void* rank);
-void Enqueue(int type, int value);
+void Enqueue(int type, int value, struct queue **front, struct queue **rear);
+int Dequeue(int *type, int *value, struct queue **front, struct queue **rear);
 int Delete(int value, struct list_node_s** head_p);
-int Dequeue(int *type, int *value);
 int Insert(int value, struct list_node_s** head_p);
 int Member(int value, struct list_node_s* head_p);
 
@@ -66,10 +71,10 @@ int main(int argc, char* argv[]) {
 			scanf("%d", &type);
 			printf("Value: ");
 			scanf("%d", &value);
-			Enqueue(type, value);
+			Enqueue(type, value, &front, &rear);
 		}
 		
-		
+
 		//array_of_members.a = malloc(how_many*sizeof(int));
 		//array_of_members.effective_size = 0;
 		
@@ -126,8 +131,8 @@ void* Sleep (void* rank) {
 	while (!wake_up_all){
 		pthread_mutex_lock(&mutex);
 		while(pthread_cond_wait(&cond_var, &mutex) != 0); 
-		if (!wake_up_all) {  // I'm awaken because I've work to do	
-			Dequeue(&type, &value);
+		if (!wake_up_all) {  // I'm awaken because I've work to do
+			printf("Dequeue: %d\n", Dequeue(&type, &value, &front, &rear));
 		}
 		pthread_mutex_unlock(&mutex);
 		if (!wake_up_all) { // I'm awaken because I've work to do	
@@ -159,36 +164,40 @@ void* Sleep (void* rank) {
 	return NULL;
 }
 
-void Enqueue(int type, int value) {
-	struct queue *task;
+void Enqueue(int type, int value, struct queue **front, struct queue **rear) {
+	Queue *task = NULL;
 	
 	task = (struct queue*)malloc(sizeof(struct queue));
 	task->type = type;
 	task->value = value;
 	task->link = NULL;
-	if (rear == NULL) {
-		front = rear = task;
+	if ((*rear)) {
+		(*rear)->link = task;
 	}
-	else {
-		rear->link = task;
-		rear = task;
+	
+	*rear = task;
+	
+	if (!(*front)) {
+		*front = *rear;
 	}
+	
+	size++;
 }
 
-int Dequeue(int *type, int *value){
-	struct queue *temp;
-	temp = front;
-	if (front == NULL){
-		front = rear = NULL;
+int Dequeue(int *type, int *value, struct queue **front, struct queue **rear){
+	Queue *temp = NULL;
+	if (size == 0){
 		return -1;
 	}
-	else {
-		*type = front->type;
-		*value = front->value;
-		front = front->link;
-		free(temp);
-		return 0;
-	}
+	temp = *front;
+	*type = temp->type;
+	*value = temp->value;
+	
+	*front = (*front)->link;
+	
+	size--;
+	free(temp);
+	return 0;
 }
 
 
