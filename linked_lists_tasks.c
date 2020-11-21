@@ -9,6 +9,7 @@ sleep in a condition wait. The main thread generates blocks of tasks to be carri
 
 /* shared variables */
 pthread_mutex_t mutex;
+pthread_mutex_t mutex2;
 pthread_cond_t cond_var;
 pthread_rwlock_t lock;
 bool wake_up_all = false; //global variable indicating when there will be no more tasks
@@ -16,11 +17,22 @@ bool wake_up_all = false; //global variable indicating when there will be no mor
 struct list_node_s {
 	int data;
 	struct list_node_s* next;
-};
+}*head;
 
+struct queue {
+	int type, value;
+	struct queue *link;
+}*front, *rear;
+
+/*struct members {
+	int *a;
+	int effective_size;
+}array_of_members;*/
 
 void* Sleep (void* rank);
+void Enqueue(int type, int value);
 int Delete(int value, struct list_node_s** head_p);
+int Dequeue(int *type, int *value);
 int Insert(int value, struct list_node_s** head_p);
 int Member(int value, struct list_node_s* head_p);
 
@@ -29,16 +41,63 @@ int main(int argc, char* argv[]) {
 	/* variables declaration */
 	long thread_count = strtol(argv[1], NULL, 10);
 	pthread_t* thread_handles = malloc(thread_count*sizeof(pthread_t));
+	
 
 	pthread_mutex_init(&mutex, NULL);
+	pthread_mutex_init(&mutex2, NULL);
 	pthread_cond_init(&cond_var, NULL);
 	pthread_rwlock_init(&lock, NULL);
 
 	for (long thread = 0; thread < thread_count; thread++)
 		pthread_create(&thread_handles[thread], NULL, Sleep, (void*) thread);
+	
 
 	/* main thread generates tasks */
-
+	int flag;
+	int type, value;
+	int count = 1;
+	int how_many;
+	do {
+		printf("You're about to enter your %d round of tasks, how many this time? Remember, you can choose how many tasks you want!\n", count);
+		scanf("%d", &how_many);
+		printf("Great! Now remember, when asked for the type, you should use the number corresponding to your operation: Member [1], Insert [2], Delete[3]\n");
+		for (int i = 0; i < how_many; i++){
+			printf("Type: ");
+			scanf("%d", &type);
+			printf("Value: ");
+			scanf("%d", &value);
+			Enqueue(type, value);
+		}
+		
+		
+		//array_of_members.a = malloc(how_many*sizeof(int));
+		//array_of_members.effective_size = 0;
+		
+		
+		while (how_many > thread_count) {
+			pthread_mutex_lock(&mutex);
+			pthread_cond_broadcast(&cond_var);
+			pthread_mutex_unlock(&mutex);
+			how_many -= thread_count;
+		}
+		
+		for (int i = 0; i < how_many; i++) {
+			pthread_mutex_lock(&mutex);
+			pthread_cond_signal(&cond_var);
+			pthread_mutex_unlock(&mutex);
+		}
+		
+		//print members
+		//printf("Now let's print the output of the Member functions: \n");
+		//for (int i = 0; i < array_of_members.effective_size; i++)
+			//printf("%d is member.\n", array_of_members.a[i]);
+		
+		
+		printf("Do you want to continue? [1/0]\n");
+		scanf("%d", &flag);
+		count++;
+		//free(array_of_members.a);
+	} while (flag == 1);
 
 
 	/* main thread wakes up other threads */
@@ -53,6 +112,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	pthread_mutex_destroy(&mutex);
+	pthread_mutex_destroy(&mutex2);
 	pthread_cond_destroy(&cond_var);
 	pthread_rwlock_destroy(&lock);
 	free(thread_handles);
@@ -61,18 +121,76 @@ int main(int argc, char* argv[]) {
 
 void* Sleep (void* rank) {
 	long my_rank = (long) rank;
+	int type, value;
 
 	while (!wake_up_all){
 		pthread_mutex_lock(&mutex);
 		while(pthread_cond_wait(&cond_var, &mutex) != 0); 
-		if (!wake_up_all) { // I'm awaken because I've work to do
-			//do stuff 
+		if (!wake_up_all) {  // I'm awaken because I've work to do	
+			Dequeue(&type, &value);
 		}
 		pthread_mutex_unlock(&mutex);
+		if (!wake_up_all) { // I'm awaken because I've work to do	
+			switch(type) {
+				case 1 :
+					pthread_rwlock_rdlock(&lock);
+					int is_member = Member(value, head);
+					pthread_rwlock_unlock(&lock);
+					printf("Hi from thread %li, is_member = %d\n", my_rank, is_member);
+					/*if (is_member)
+						printf("%d is member\n", value);*/
+					break;
+				case 2 :
+					pthread_rwlock_wrlock(&lock);
+					Insert(value, &head);
+					pthread_rwlock_unlock(&lock);
+					break;
+				case 3 :
+					pthread_rwlock_wrlock(&lock);
+					Delete(value, &head);
+					pthread_rwlock_unlock(&lock);
+					break;
+				default : 
+					printf("I shouldn't be here! Type = %d\n", type);
+			}
+		}
 	}
 
 	return NULL;
 }
+
+void Enqueue(int type, int value) {
+	struct queue *task;
+	
+	task = (struct queue*)malloc(sizeof(struct queue));
+	task->type = type;
+	task->value = value;
+	task->link = NULL;
+	if (rear == NULL) {
+		front = rear = task;
+	}
+	else {
+		rear->link = task;
+		rear = task;
+	}
+}
+
+int Dequeue(int *type, int *value){
+	struct queue *temp;
+	temp = front;
+	if (front == NULL){
+		front = rear = NULL;
+		return -1;
+	}
+	else {
+		*type = front->type;
+		*value = front->value;
+		front = front->link;
+		free(temp);
+		return 0;
+	}
+}
+
 
 int Member(int value, struct list_node_s* head_p){
 	struct list_node_s* curr_p = head_p;
@@ -87,6 +205,7 @@ int Member(int value, struct list_node_s* head_p){
 		return 1;
 	}
 }
+
 
 int Insert(int value, struct list_node_s** head_p){
 	struct list_node_s* curr_p = *head_p;
