@@ -29,10 +29,8 @@ Queue *rear;
 
 int size = 0;
 
-/*struct members {
-	int *a;
-	int effective_size;
-}array_of_members;*/
+int *a;
+int effective_size;
 
 void* Sleep (void* rank);
 void Enqueue(int type, int value, struct queue **front, struct queue **rear);
@@ -75,8 +73,8 @@ int main(int argc, char* argv[]) {
 		}
 		
 
-		//array_of_members.a = malloc(how_many*sizeof(int));
-		//array_of_members.effective_size = 0;
+		a = malloc(how_many*sizeof(int));
+		effective_size = 0;
 		
 		
 		while (how_many > thread_count) {
@@ -92,16 +90,18 @@ int main(int argc, char* argv[]) {
 			pthread_mutex_unlock(&mutex);
 		}
 		
-		//print members
-		//printf("Now let's print the output of the Member functions: \n");
-		//for (int i = 0; i < array_of_members.effective_size; i++)
-			//printf("%d is member.\n", array_of_members.a[i]);
-		
+		//some kind of barrier with semaphores
+		/*print members*/
+		if (effective_size > 0) {
+			printf("Now let's print the output of the Member functions: \n");
+			for (int i = 0; i < effective_size; i++)
+				printf("%d is a member of the list.\n", a[i]);
+		}
 		
 		printf("Do you want to continue? [1/0]\n");
 		scanf("%d", &flag);
 		count++;
-		//free(array_of_members.a);
+		free(a);
 	} while (flag == 1);
 
 
@@ -132,7 +132,7 @@ void* Sleep (void* rank) {
 		pthread_mutex_lock(&mutex);
 		while(pthread_cond_wait(&cond_var, &mutex) != 0); 
 		if (!wake_up_all) {  // I'm awaken because I've work to do
-			printf("Dequeue: %d\n", Dequeue(&type, &value, &front, &rear));
+			Dequeue(&type, &value, &front, &rear);
 		}
 		pthread_mutex_unlock(&mutex);
 		if (!wake_up_all) { // I'm awaken because I've work to do	
@@ -141,9 +141,11 @@ void* Sleep (void* rank) {
 					pthread_rwlock_rdlock(&lock);
 					int is_member = Member(value, head);
 					pthread_rwlock_unlock(&lock);
-					printf("Hi from thread %li, is_member = %d\n", my_rank, is_member);
-					/*if (is_member)
-						printf("%d is member\n", value);*/
+					if (is_member) {
+						a[effective_size] = value;
+						effective_size++;
+					}
+						
 					break;
 				case 2 :
 					pthread_rwlock_wrlock(&lock);
