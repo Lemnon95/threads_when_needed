@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 /*Write a Pthreads program that implements a “task queue.” The main thread
 begins by starting a user-specified number of threads that immediately go to
@@ -9,7 +10,6 @@ sleep in a condition wait. The main thread generates blocks of tasks to be carri
 
 /* shared variables */
 pthread_mutex_t mutex;
-pthread_mutex_t mutex2;
 pthread_cond_t cond_var;
 pthread_rwlock_t lock;
 bool wake_up_all = false; //global variable indicating when there will be no more tasks
@@ -27,10 +27,7 @@ typedef struct queue {
 Queue *front;
 Queue *rear;
 
-int size = 0;
-
-int *a;
-int effective_size;
+int size = 0; //queue size
 
 void* Sleep (void* rank);
 void Enqueue(int type, int value, struct queue **front, struct queue **rear);
@@ -47,7 +44,6 @@ int main(int argc, char* argv[]) {
 	
 
 	pthread_mutex_init(&mutex, NULL);
-	pthread_mutex_init(&mutex2, NULL);
 	pthread_cond_init(&cond_var, NULL);
 	pthread_rwlock_init(&lock, NULL);
 
@@ -61,6 +57,7 @@ int main(int argc, char* argv[]) {
 	int count = 1;
 	int how_many;
 	do {
+		
 		printf("You're about to enter your %d round of tasks, how many this time? Remember, you can choose how many tasks you want!\n", count);
 		scanf("%d", &how_many);
 		printf("Great! Now remember, when asked for the type, you should use the number corresponding to your operation: Member [1], Insert [2], Delete[3]\n");
@@ -71,11 +68,6 @@ int main(int argc, char* argv[]) {
 			scanf("%d", &value);
 			Enqueue(type, value, &front, &rear);
 		}
-		
-
-		a = malloc(how_many*sizeof(int));
-		effective_size = 0;
-		
 		
 		while (how_many > thread_count) {
 			pthread_mutex_lock(&mutex);
@@ -90,18 +82,9 @@ int main(int argc, char* argv[]) {
 			pthread_mutex_unlock(&mutex);
 		}
 		
-		//some kind of barrier with semaphores
-		/*print members*/
-		if (effective_size > 0) {
-			printf("Now let's print the output of the Member functions: \n");
-			for (int i = 0; i < effective_size; i++)
-				printf("%d is a member of the list.\n", a[i]);
-		}
-		
 		printf("Do you want to continue? [1/0]\n");
 		scanf("%d", &flag);
 		count++;
-		free(a);
 	} while (flag == 1);
 
 
@@ -117,7 +100,6 @@ int main(int argc, char* argv[]) {
 	}
 
 	pthread_mutex_destroy(&mutex);
-	pthread_mutex_destroy(&mutex2);
 	pthread_cond_destroy(&cond_var);
 	pthread_rwlock_destroy(&lock);
 	free(thread_handles);
@@ -142,8 +124,7 @@ void* Sleep (void* rank) {
 					int is_member = Member(value, head);
 					pthread_rwlock_unlock(&lock);
 					if (is_member) {
-						a[effective_size] = value;
-						effective_size++;
+						printf("%d is member\n", value);
 					}
 						
 					break;
