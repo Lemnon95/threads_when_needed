@@ -10,9 +10,11 @@ sleep in a condition wait. The main thread generates blocks of tasks to be carri
 
 /* shared variables */
 pthread_mutex_t mutex;
+pthread_mutex_t mutex2;
 pthread_cond_t cond_var;
 pthread_rwlock_t lock;
 bool wake_up_all = false; //global variable indicating when there will be no more tasks
+long is_done;
 
 struct list_node_s {
 	int data;
@@ -44,6 +46,7 @@ int main(int argc, char* argv[]) {
 	
 
 	pthread_mutex_init(&mutex, NULL);
+	pthread_mutex_init(&mutex2, NULL);
 	pthread_cond_init(&cond_var, NULL);
 	pthread_rwlock_init(&lock, NULL);
 
@@ -69,6 +72,9 @@ int main(int argc, char* argv[]) {
 			Enqueue(type, value, &front, &rear);
 		}
 		
+		is_done = 0;
+		int when_done = how_many;
+		
 		while (how_many > thread_count) {
 			pthread_mutex_lock(&mutex);
 			pthread_cond_broadcast(&cond_var);
@@ -78,9 +84,11 @@ int main(int argc, char* argv[]) {
 		
 		for (int i = 0; i < how_many; i++) {
 			pthread_mutex_lock(&mutex);
-			pthread_cond_signal(&cond_var);
+			pthread_cond_signal(&cond_var);		
 			pthread_mutex_unlock(&mutex);
 		}
+		
+		while(is_done < when_done); //barrier, wait for completion of children
 		
 		printf("Do you want to continue? [1/0]\n");
 		scanf("%d", &flag);
@@ -100,6 +108,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	pthread_mutex_destroy(&mutex);
+	pthread_mutex_destroy(&mutex2);
 	pthread_cond_destroy(&cond_var);
 	pthread_rwlock_destroy(&lock);
 	free(thread_handles);
@@ -109,9 +118,12 @@ int main(int argc, char* argv[]) {
 void* Sleep (void* rank) {
 	long my_rank = (long) rank;
 	int type, value;
+	int i = 0;
 
 	while (!wake_up_all){
 		pthread_mutex_lock(&mutex);
+		if (i > 0) //I've actually completed a task
+			is_done++;
 		while(pthread_cond_wait(&cond_var, &mutex) != 0); 
 		if (!wake_up_all) {  // I'm awaken because I've work to do
 			Dequeue(&type, &value, &front, &rear);
@@ -123,24 +135,32 @@ void* Sleep (void* rank) {
 					pthread_rwlock_rdlock(&lock);
 					int is_member = Member(value, head);
 					pthread_rwlock_unlock(&lock);
+					pthread_mutex_lock(&mutex2);
 					if (is_member) {
-						printf("%d is member\n", value);
+						printf("%d is a member\n", value);
 					}
+					else {
+						printf("%d is not a member\n", value);
+					}
+					pthread_mutex_unlock(&mutex2);
 						
 					break;
 				case 2 :
 					pthread_rwlock_wrlock(&lock);
 					Insert(value, &head);
+					is_done++;
 					pthread_rwlock_unlock(&lock);
 					break;
 				case 3 :
 					pthread_rwlock_wrlock(&lock);
 					Delete(value, &head);
+					is_done++;
 					pthread_rwlock_unlock(&lock);
 					break;
 				default : 
 					printf("I shouldn't be here! Type = %d\n", type);
 			}
+			i++;
 		}
 	}
 
