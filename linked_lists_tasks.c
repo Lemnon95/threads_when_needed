@@ -74,12 +74,15 @@ int main(int argc, char* argv[]) {
 		
 		is_done = 0;
 		int when_done = how_many;
-		
-		while (how_many > thread_count) {
+		int i = 0;
+		while (how_many >= thread_count) {
 			pthread_mutex_lock(&mutex);
 			pthread_cond_broadcast(&cond_var);
 			pthread_mutex_unlock(&mutex);
 			how_many -= thread_count;
+			i++;
+			while (is_done < thread_count*i);
+			
 		}
 		
 		for (int i = 0; i < how_many; i++) {
@@ -148,13 +151,11 @@ void* Sleep (void* rank) {
 				case 2 :
 					pthread_rwlock_wrlock(&lock);
 					Insert(value, &head);
-					is_done++;
 					pthread_rwlock_unlock(&lock);
 					break;
 				case 3 :
 					pthread_rwlock_wrlock(&lock);
 					Delete(value, &head);
-					is_done++;
 					pthread_rwlock_unlock(&lock);
 					break;
 				default : 
@@ -268,3 +269,4 @@ int Delete(int value, struct list_node_s** head_p) {
 		return 0;
 	}
 }
+
