@@ -6,10 +6,8 @@ I made this program as a university project, in particular for the "Multicore Pa
 
 ## Technologies
 
-Programming Language:
-* C
-
-Library:
-* Pthread
+Technology Used:
+* C Programming Language
+* Pthread Library
 
 
