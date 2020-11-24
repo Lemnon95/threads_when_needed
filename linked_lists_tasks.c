@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <string.h>
 
 /*Write a Pthreads program that implements a “task queue.” The main thread
 begins by starting a user-specified number of threads that immediately go to
@@ -31,12 +32,24 @@ Queue *rear;
 
 int size = 0; //queue size
 
+typedef struct queue_str {
+	char str[100];
+	struct queue_str *link;
+} Queue_Str;
+
+Queue_Str *front_str;
+Queue_Str *rear_str;
+
+int size_QS = 0;
+
 void* Sleep (void* rank);
 void Enqueue(int type, int value, struct queue **front, struct queue **rear);
 int Dequeue(int *type, int *value, struct queue **front, struct queue **rear);
 int Delete(int value, struct list_node_s** head_p);
 int Insert(int value, struct list_node_s** head_p);
 int Member(int value, struct list_node_s* head_p);
+void Enqueue_Str(char *src, struct queue_str **front, struct queue_str **rear);
+int Dequeue_Str(char *str, struct queue_str **front, struct queue_str **rear);
 
 
 int main(int argc, char* argv[]) {
@@ -92,6 +105,12 @@ int main(int argc, char* argv[]) {
 		}
 		
 		while(is_done < when_done); //barrier, wait for completion of children
+		printf("Tasks acquired, now processing...\n");
+		char string[100];
+		while (Dequeue_Str(string, &front_str, &rear_str) == 0) { //no need for critical section, every thread is sleeping
+			printf("%s", string);
+		}
+		
 		
 		printf("Do you want to continue? [1/0]\n");
 		scanf("%d", &flag);
@@ -133,30 +152,45 @@ void* Sleep (void* rank) {
 		}
 		pthread_mutex_unlock(&mutex);
 		if (!wake_up_all) { // I'm awaken because I've work to do	
+			char src[100];
 			switch(type) {
 				case 1 :
 					pthread_rwlock_rdlock(&lock);
 					int is_member = Member(value, head);
 					pthread_rwlock_unlock(&lock);
-					pthread_mutex_lock(&mutex2);
+					pthread_mutex_lock(&mutex2); //critical section for Queue_Str
 					if (is_member) {
-						printf("%d is a member\n", value);
+						sprintf(src, "%d is a list member\n", value);
 					}
 					else {
-						printf("%d is not a member\n", value);
+						sprintf(src, "%d is NOT a list member\n", value);
 					}
+					Enqueue_Str(src, &front_str, &rear_str);
 					pthread_mutex_unlock(&mutex2);
-						
+					
 					break;
 				case 2 :
 					pthread_rwlock_wrlock(&lock);
 					Insert(value, &head);
 					pthread_rwlock_unlock(&lock);
+					pthread_mutex_lock(&mutex2); //critical section for Queue_Str
+					sprintf(src, "%d has been added to the list\n", value);
+					Enqueue_Str(src, &front_str, &rear_str);
+					pthread_mutex_unlock(&mutex2);
 					break;
 				case 3 :
 					pthread_rwlock_wrlock(&lock);
-					Delete(value, &head);
+					int success = Delete(value, &head);
 					pthread_rwlock_unlock(&lock);
+					pthread_mutex_lock(&mutex2); //critical section for Queue_Str
+					if (success) {
+						sprintf(src, "%d has been deleted from the list\n", value);
+					}
+					else {
+						sprintf(src, "%d has NOT been deleted from the list, because it wasn't in it!\n", value);
+					}
+					Enqueue_Str(src, &front_str, &rear_str);
+					pthread_mutex_unlock(&mutex2);
 					break;
 				default : 
 					printf("I shouldn't be here! Type = %d\n", type);
@@ -268,5 +302,42 @@ int Delete(int value, struct list_node_s** head_p) {
 	else {
 		return 0;
 	}
+}
+
+void Enqueue_Str(char *src, struct queue_str **front, struct queue_str **rear) {
+	Queue_Str *task = NULL;
+	
+	task = (struct queue_str*)malloc(sizeof(struct queue_str));
+	memset(task->str, '\0', sizeof(task->str));
+	strcpy(task->str, src);
+	task->link = NULL;
+	if ((*rear)) {
+		(*rear)->link = task;
+	}
+	
+	*rear = task;
+	
+	if (!(*front)) {
+		*front = *rear;
+	}
+	
+	size_QS++;
+}
+
+
+int Dequeue_Str(char *str, struct queue_str **front, struct queue_str **rear){
+	Queue_Str *temp = NULL;
+	if (size_QS == 0){
+		return -1;
+	}
+	temp = *front;
+	strcpy(str, (temp->str));
+
+	
+	*front = (*front)->link;
+	
+	size_QS--;
+	free(temp);
+	return 0;
 }
 
