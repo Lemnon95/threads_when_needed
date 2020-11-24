@@ -6,7 +6,10 @@ I made this program as a university project, in particular for the "Multicore Pa
 
 ## Technologies
 
-C Programming Language
-Pthread Library
+Programming Language:
+* C
+
+Library:
+* Pthread
 
 
