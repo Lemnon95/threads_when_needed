@@ -13,6 +13,8 @@ I made this program as a university project, in particular for the "Multicore Pa
 
 To run this program on Linux, compile and run it like this:
 
-* gcc -g -Wall linked_lists_tasks.c -lpthread
-* ./a.out x  (where x is the number of threads you decide to use).
 
+```
+gcc -g -Wall linked_lists_tasks.c -lpthread
+./a.out x  (where x is the number of threads you decide to use).
+```
