@@ -10,12 +10,12 @@ begins by starting a user-specified number of threads that immediately go to
 sleep in a condition wait. The main thread generates blocks of tasks to be carried out by the other threads; each time it generates a new block of tasks, it awakens a thread with a condition signal. When a thread finishes executing its block of tasks, it should return to a condition wait. When the main thread completes generating tasks, it sets a global variable indicating that there will be no more tasks, and awakens all the threads with a condition broadcast. For the sake of explicitness, make your tasks linked list operations.*/
 
 /* shared variables */
-pthread_mutex_t mutex; //mutex for handling the condition variable that handles the sleep/wake mechanism
-pthread_mutex_t mutex2; //mutex for accessing the Queue_Str
+pthread_mutex_t mutex;
+pthread_mutex_t mutex2;
 pthread_cond_t cond_var;
-pthread_rwlock_t lock; //rwlock that handles access to the list
+pthread_rwlock_t lock;
 bool wake_up_all = false; //global variable indicating when there will be no more tasks
-long is_done; //global variable that keeps track of the number of threads that have completed their task in a given instant
+long is_done;
 
 struct list_node_s {
 	int data;
@@ -40,9 +40,9 @@ typedef struct queue_str {
 Queue_Str *front_str;
 Queue_Str *rear_str;
 
-int size_QS = 0; //size of Queue_Str
+int size_QS = 0;
 
-void* Sleep (void* rank);
+void* Sleep (void* dummy);
 void Enqueue(int type, int value, struct queue **front, struct queue **rear);
 int Dequeue(int *type, int *value, struct queue **front, struct queue **rear);
 int Delete(int value, struct list_node_s** head_p);
@@ -53,7 +53,7 @@ int Dequeue_Str(char *str, struct queue_str **front, struct queue_str **rear);
 
 
 int main(int argc, char* argv[]) {
-	/* initiation of pthread structures */
+	/* variables declaration */
 	long thread_count = strtol(argv[1], NULL, 10);
 	pthread_t* thread_handles = malloc(thread_count*sizeof(pthread_t));
 	
@@ -64,14 +64,14 @@ int main(int argc, char* argv[]) {
 	pthread_rwlock_init(&lock, NULL);
 
 	for (long thread = 0; thread < thread_count; thread++)
-		pthread_create(&thread_handles[thread], NULL, Sleep, (void*) thread);
+		pthread_create(&thread_handles[thread], NULL, Sleep, (void*) NULL);
 	
 
 	/* main thread generates tasks */
-	int flag; //indicates wheter or not the user wants to enter an other block of tasks.
+	int flag;
 	int type, value;
-	int count = 1; //counts the iteration of the block of tasks
-	int how_many; //at a given istant, it stores the number of tasks left to do
+	int count = 1;
+	int how_many;
 	do {
 		
 		printf("You're about to enter your %d round of tasks, how many this time? Remember, you can choose how many tasks you want!\n", count);
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 		}
 		
 		is_done = 0;
-		int when_done = how_many; //keep track of the total number of tasks to be executed
+		int when_done = how_many;
 		int i = 0;
 		while (how_many >= thread_count) {
 			pthread_mutex_lock(&mutex);
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 			pthread_mutex_unlock(&mutex);
 			how_many -= thread_count;
 			i++;
-			while (is_done < thread_count*i); //main thread must wait for the completion of children
+			while (is_done < thread_count*i);
 			
 		}
 		
@@ -137,8 +137,7 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-void* Sleep (void* rank) {
-	long my_rank = (long) rank;
+void* Sleep (void* dummy) {
 	int type, value;
 	int i = 0;
 
@@ -153,14 +152,13 @@ void* Sleep (void* rank) {
 		pthread_mutex_unlock(&mutex);
 		if (!wake_up_all) { // I'm awaken because I've work to do	
 			char src[100];
-			int success;
 			switch(type) {
 				case 1 :
 					pthread_rwlock_rdlock(&lock);
-					success = Member(value, head);
+					int is_member = Member(value, head);
 					pthread_rwlock_unlock(&lock);
 					pthread_mutex_lock(&mutex2); //critical section for Queue_Str
-					if (success) {
+					if (is_member) {
 						sprintf(src, "%d is a list member\n", value);
 					}
 					else {
@@ -172,21 +170,16 @@ void* Sleep (void* rank) {
 					break;
 				case 2 :
 					pthread_rwlock_wrlock(&lock);
-					success = Insert(value, &head);
+					Insert(value, &head);
 					pthread_rwlock_unlock(&lock);
 					pthread_mutex_lock(&mutex2); //critical section for Queue_Str
-					if (success) {
-						sprintf(src, "%d has been added to the list\n", value);
-					}
-					else {
-						sprintf(src, "%d has NOT been added to the list, it was already in it!\n", value);
-					}
+					sprintf(src, "%d has been added to the list\n", value);
 					Enqueue_Str(src, &front_str, &rear_str);
 					pthread_mutex_unlock(&mutex2);
 					break;
 				case 3 :
 					pthread_rwlock_wrlock(&lock);
-					success = Delete(value, &head);
+					int success = Delete(value, &head);
 					pthread_rwlock_unlock(&lock);
 					pthread_mutex_lock(&mutex2); //critical section for Queue_Str
 					if (success) {
@@ -204,7 +197,6 @@ void* Sleep (void* rank) {
 			i++;
 		}
 	}
-
 	return NULL;
 }
 
