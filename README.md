@@ -23,4 +23,4 @@ gcc -g -Wall linked_lists_tasks.c -lpthread
 
 I learned how to work in a multithread environment using the Pthread library, this means handling critical sections, thread's communications, barriers and more.
 
-Furthermore, I learned how to use effectively Queues and Linked Lists in C programming language.
+Furthermore, I learned how to effectively use Queues and Linked Lists in C programming language.
