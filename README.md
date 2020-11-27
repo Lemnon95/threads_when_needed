@@ -16,7 +16,7 @@ To run this program on Linux, compile and run it like this:
 
 ```
 gcc -g -Wall linked_lists_tasks.c -lpthread
-./a.out x  (where x is the number of threads you decide to use).
+./a.out x  (where x is the number of threads you intend to use).
 ```
 
 ## What I Learned
